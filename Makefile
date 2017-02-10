@@ -8,7 +8,7 @@
 #################################################
 
 CC = gcc
-CFLAGS = -std=c90 -Wall -pedantic -ansi -W -Wextra
+CFLAGS = -std=gnu99 -Wall -pedantic -W -Wextra
 LOGIN = xstejs24
 PROJ_NAME = ticket
 FILES = ticket.o 
