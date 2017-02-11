@@ -7,11 +7,22 @@
 *			Verze:	1.0		                    *
 ************************************************/
 
+#define _POSIX_C_SOURCE 199500L
 #include <pthread.h>
+//#include <limits.h>
+//#ifdef _POSIX_THREADS
+//	#include <pthread.h>
+//#else
+//	#error "POSIX threads are not available"
+//#endif
+
+
 #include <stdio.h>
 #include <getopt.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <sys/timeb.h>	// možná není an merlinu
+#include <sys/time.h>
 
 /*
  * Struktura pro vstupní parametry
@@ -34,6 +45,17 @@ bool isNumber (char *argument)
         return false;
     return true;
 }
+
+/*
+ * Funkce pro vytvoření semínka pro random generátor
+ * Zdroj: http://stackoverflow.com/questions/1442116/how-to-get-date-and-time-value-in-c-program
+ */
+unsigned int getSeed();
+
+/*
+ * Funkce pro uspání vlákna.
+ */
+void threadSleep(int random);
 
 /*
  * Funkce pro zpracování parametrů.

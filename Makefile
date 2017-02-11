@@ -8,10 +8,10 @@
 #################################################
 
 CC = gcc
-CFLAGS = -std=gnu99 -Wall -pedantic -W -Wextra
+CFLAGS = -std=gnu99 -Wall -pedantic -W -Wextra -pthread
 LOGIN = xstejs24
-PROJ_NAME = ticket
-FILES = ticket.o 
+PROJ_NAME = proj01
+FILES = proj01.o 
 PACK = *.c *.h Makefile
 
 %.o: %.c %.h
