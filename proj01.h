@@ -16,6 +16,9 @@
 //	#error "POSIX threads are not available"
 //#endif
 
+#define _XOPEN_SOURCE
+#define _XOPEN_SOURCE_EXTENDED 1 /* XPG 4.2 - needed for WCOREDUMP() */
+
 
 #include <stdio.h>
 #include <getopt.h>

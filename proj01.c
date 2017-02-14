@@ -9,6 +9,14 @@
 
 #include "proj01.h"
 
+int counter = 0;
+int ticketG = -1;
+int N;
+int M;
+pthread_mutex_t ks_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoření semaforu	
+pthread_mutex_t gen_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoření semaforu	
+pthread_mutex_t ticket_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoření semaforu
+
 /*
  * Funkce pro zpracování parametrů.
  */
@@ -20,11 +28,13 @@ bool parseArguments(Arguments *args, char* argv[], int argc)
     while ((opt = getopt(argc, argv, "N:M:")) != -1) {		// Zpracování parametrů
         switch (opt) {
 			case 'N': 
-				args->N = atoi(optarg); 
+				args->N = atoi(optarg);
+				N = args->N;
 				args->isSetN = true;	// Nastavení příznaku zpracování povinného parametru - zadán
 				break;
 			case 'M': 
 				args->M = atoi(optarg); 
+				M = args->M;
 				args->isSetM = true;	// Nastavení příznaku zpracování povinného parametru - zadán
 				break;
 			default:
@@ -77,17 +87,13 @@ void threadSleep(int random)
       printf("Nano sleep system call failed \n");
    }
 
-   printf("Nano sleep successfull \n");
+//   printf("Nano sleep successfull \n");
 
 }
 
 
 
-int counter = 0;
-int ticketG = 0;
-pthread_mutex_t ks_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoření semaforu	
-pthread_mutex_t gen_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoření semaforu	
-pthread_mutex_t ticket_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoření semaforu
+
 
 int getticket(void)
 {
@@ -102,12 +108,31 @@ int getticket(void)
 }
 
 
-void *thread_function(void *dummyPtr)
+void *thread_function(void *i)
 {
-   printf("Thread number %ld\n", pthread_self());
-   pthread_mutex_lock( &gen_mutex );
-   counter++;
-   pthread_mutex_unlock( &gen_mutex );
+	printf("Hodnota \"i\" ve funkci vlákna: %d\n", *((int *)i));
+	int id = *((int *)i);
+	free(i);
+	int ticket;
+	printf("Thread number %ld -> %d\n", pthread_self(),id);
+   
+	unsigned int seed = getSeed();
+	
+	while ((ticket = getticket()) < M) { /* Přidělení lístku */
+		/* Náhodné čekání v intervalu <0,0 s, 0,5 s> */
+		threadSleep(rand_r(&seed) / (RAND_MAX/500));
+		//await(ticket);              /* Vstup do KS */
+		pthread_mutex_lock( &ks_mutex );	// lock
+		printf("Výpis v KS: %d\t(%ld)\n", ticket, pthread_self()); /* fflush(stdout); */
+		fflush(stdout);
+		pthread_mutex_unlock( &ks_mutex );	//unclock
+		//advance();              /* Výstup z KS */
+		/* Náhodné čekání v intervalu <0,0 s, 0,5 s> */
+		threadSleep(rand_r(&seed) / (RAND_MAX/500));
+		//return 1;
+	}	   
+	
+	return NULL;
 }
 
 int main(int argc, char* argv[]) 
@@ -125,42 +150,25 @@ int main(int argc, char* argv[])
 		printf("Vytvářím vlákna...\n");
 		for(i=1; i <= args.N; i++)
 		{
-			pthread_create( &thread_id[i], NULL, thread_function, NULL );
-			
+			int *arg = (int*)malloc(sizeof(*arg));
+			*arg = i;
+			pthread_create( &thread_id[i], NULL, thread_function, arg );
 		}
 		
-		for(j=1; j <= args.N; j++)
-		{
-			printf("ID vlákna ze struktury: %ld\n",thread_id[j]);
-		}		
+//		for(j=1; j <= args.N; j++)
+//		{
+//			printf("ID vlákna ze struktury: %ld\n",thread_id[j]);
+//		}		
+		
 
+		
 		for(j=1; j <= args.N; j++)
 		{		
 			pthread_join( thread_id[j], NULL);
-		}
+		}		
 		
-		unsigned int seed = getSeed();
-		threadSleep(rand_r(&seed) / (RAND_MAX/500));
-		
-		int ticket;
-		while ((ticket = getticket()) < args.M) { /* Přidělení lístku */
-			/* Náhodné čekání v intervalu <0,0 s, 0,5 s> */
-			//await(ticket);              /* Vstup do KS */
-			pthread_mutex_lock( &ks_mutex );	// lock
-			printf("Výpis v KS: %d\t(%ld)\n", ticket, pthread_self()); /* fflush(stdout); */
-			pthread_mutex_unlock( &ks_mutex );	//unclock
-			//advance();              /* Výstup z KS */
-			/* Náhodné čekání v intervalu <0,0 s, 0,5 s> */
-			//return 1;
-		}	
-		
-struct timeval tv;
-gettimeofday(&tv,NULL);
-printf("Test: %d\n",tv.tv_sec);
-printf("Test: %d\n",tv.tv_usec);
 		return 0;
 	}
 	else
 		return 1;
-
 }
