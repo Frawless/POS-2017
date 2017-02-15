@@ -11,15 +11,12 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <sys/timeb.h>	// možná není an merlinu
 #include <sys/time.h>
-
 #include <sys/mman.h>
 #include <sys/shm.h>
 #include <fcntl.h>
 
 #define _POSIX_C_SOURCE 200809L
-//#include <pthread.h>
 #include <unistd.h>
 #if _POSIX_VERSION >= 200112L
 	#include <pthread.h>
