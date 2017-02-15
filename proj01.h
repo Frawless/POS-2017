@@ -19,6 +19,8 @@
 #define _XOPEN_SOURCE
 #define _XOPEN_SOURCE_EXTENDED 1 /* XPG 4.2 - needed for WCOREDUMP() */
 
+#define MAX_TIME 500
+
 
 #include <stdio.h>
 #include <getopt.h>
@@ -36,6 +38,14 @@ typedef struct{
 	bool isSetN;
 	bool isSetM;
 } Arguments;
+
+/*
+ * Struktura pro pořadí.
+ */
+typedef struct{
+	int next;
+	int now;
+} TLOCK;
 
 /*
  * Funkce pro ověření číselnosti parametrů.
@@ -76,7 +86,7 @@ int getticket(void);
  * Na počátku programu je vstup umožněn jen vláknu s lístkem 0. V kritické sekci může být v daném 
  * okamžiku maximálně jedno vlákno.
  */
-void await(int aenter);
+void await(int aenter,int id);
 
 /*
  * Výstup z kritické sekce, což umožní vstup jinému vláknu přes funkci await() s lístkem

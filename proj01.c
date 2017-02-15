@@ -10,12 +10,15 @@
 #include "proj01.h"
 
 int counter = 0;
-int ticketG = -1;
+int ticket = -1;
 int N;
 int M;
 pthread_mutex_t ks_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoření semaforu	
-pthread_mutex_t gen_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoření semaforu	
 pthread_mutex_t ticket_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoření semaforu
+
+pthread_cond_t  condition_var   = PTHREAD_COND_INITIALIZER;	// Vytvoření podmínky
+
+TLOCK lock = {.now = 0, .next = 1};
 
 /*
  * Funkce pro zpracování parametrů.
@@ -69,7 +72,7 @@ unsigned int getSeed()
 	gettimeofday(&tv,NULL);
 	
 	seed = tm.tm_hour*3600*1000*1000+tm.tm_min*60*1000*1000+tm.tm_sec*1000*1000+tv.tv_usec;
-	printf("now: %d-%d-%d %d:%d:%d\n", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+//	printf("now: %d-%d-%d %d:%d:%d\n", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	return seed;
 }
 
@@ -92,44 +95,77 @@ void threadSleep(int random)
 }
 
 
-
-
-
+/* 
+ * Výstupní hodnotou této funkce je unikátní číslo lístku, který určuje pořadí
+ * vstupu do kritické sekce. První získaný lístek má hodnotu 0, další 1, 2, atd.
+ */
 int getticket(void)
 {
 	pthread_mutex_lock( &ticket_mutex );	// lock
-	printf("Zvyšuji hodnotu lístku na: ");
-	ticketG++;
-	printf("%d\n",ticketG);
+//	printf("Zvyšuji hodnotu lístku na: ");
+	ticket++;
+//	printf("%d\n",ticket);
 	pthread_mutex_unlock( &ticket_mutex );	//unclock
 	
-	return ticketG;
+	return ticket;
+}
+
+/* 
+ * Vstup do kritické sekce, kde parametr aenter je číslo přiděleného lístku funkcí getticket(). 
+ * Na počátku programu je vstup umožněn jen vláknu s lístkem 0. V kritické sekci může být v daném 
+ * okamžiku maximálně jedno vlákno.
+ */
+void await(int aenter, int id)
+{
+	pthread_mutex_lock( &ks_mutex );	// lock
+	printf("IN: lock.now = %d => aenter = %d (%d)\n",lock.now, aenter,id);
+	while(lock.now != aenter)
+		pthread_cond_wait( &condition_var, &ks_mutex );	
+		// TODO - Ověřit funkčnost
+}
+
+/*
+ * Výstup z kritické sekce, což umožní vstup jinému vláknu přes funkci await() s lístkem
+ * o jedničku vyšším, než mělo vlákno kritickou sekci právě opouštějící.
+ */
+void advance(void)
+{
+	/* TODO - tady ta inkrementace musí být ATOMICKÁ*/
+	pthread_mutex_lock( &ticket_mutex );	// lock
+	lock.now++;
+	lock.next++;
+	pthread_mutex_unlock( &ticket_mutex );	// lock
 	
+	printf("OUT: lock.now = %d => lock.next = %d\n",lock.now, lock.next);
+	pthread_cond_broadcast( &condition_var );
+	// pthread_cond_signal( &condition_var ); - povolí spuštění posledního vlákna, broadcast probudí všechny
+	pthread_mutex_unlock( &ks_mutex );	//unclock
 }
 
 
+/*
+ * Funkce pro obslužní rutinu každého vlákna.
+ */
 void *thread_function(void *i)
 {
-	printf("Hodnota \"i\" ve funkci vlákna: %d\n", *((int *)i));
+//	printf("Hodnota \"i\" ve funkci vlákna: %d\n", *((int *)i));
 	int id = *((int *)i);
 	free(i);
 	int ticket;
-	printf("Thread number %ld -> %d\n", pthread_self(),id);
    
 	unsigned int seed = getSeed();
 	
 	while ((ticket = getticket()) < M) { /* Přidělení lístku */
+		printf("Thread ID: %d (ticket: %d)\n", id,ticket);
 		/* Náhodné čekání v intervalu <0,0 s, 0,5 s> */
-		threadSleep(rand_r(&seed) / (RAND_MAX/500));
-		//await(ticket);              /* Vstup do KS */
-		pthread_mutex_lock( &ks_mutex );	// lock
-		printf("Výpis v KS: %d\t(%ld)\n", ticket, pthread_self()); /* fflush(stdout); */
+		threadSleep(rand_r(&seed) / (RAND_MAX/MAX_TIME));
+		await(ticket,id);              /* Vstup do KS */
+		
+		printf("Ticket: %d (%d)\n", ticket, id); /* fflush(stdout); */
 		fflush(stdout);
-		pthread_mutex_unlock( &ks_mutex );	//unclock
-		//advance();              /* Výstup z KS */
+		advance();              /* Výstup z KS */
 		/* Náhodné čekání v intervalu <0,0 s, 0,5 s> */
-		threadSleep(rand_r(&seed) / (RAND_MAX/500));
-		//return 1;
+		threadSleep(rand_r(&seed) / (RAND_MAX/MAX_TIME));
 	}	   
 	
 	return NULL;
