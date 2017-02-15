@@ -17,6 +17,23 @@ pthread_cond_t  condition_var   = PTHREAD_COND_INITIALIZER;	// Vytvoření podm�
 
 // Sdílená pamět
 SharedMemory *sharedTicket;
+int N;
+int M;
+
+/*
+ * Funkce pro ověření číselnosti parametrů.
+ */
+int isNumber (char *argument)
+{
+    char *ptr;
+    long arg = strtol(argument, &ptr,10);                   
+    if (*ptr != '\0')
+	{
+		fprintf(stderr, "parseArguments() error\nUsage: proj01 [-N \"počet vláken\"] [-M \"počet průchodů KS\"]\n");
+		exit(ERR_PARAM);		// Nesprávně zadané parametry		
+	}
+    return (int)arg;
+}
 
 /*
  * Funkce pro zpracování parametrů.
@@ -29,11 +46,11 @@ bool parseArguments(char* argv[], int argc)
     while ((opt = getopt(argc, argv, "N:M:")) != -1) {		// Zpracování parametrů
         switch (opt) {
 			case 'N': 
-				sharedTicket->N = atoi(optarg);
+				N = isNumber(optarg);
 				isSetN = true;	// Nastavení příznaku zpracování povinného parametru - zadán
 				break;
 			case 'M': 
-				sharedTicket->M = atoi(optarg);
+				M = isNumber(optarg);
 				isSetM = true;	// Nastavení příznaku zpracování povinného parametru - zadán
 				break;
 			default:
@@ -43,28 +60,16 @@ bool parseArguments(char* argv[], int argc)
     }
 	
 	if(optind < argc){				// Získání posledního parametru
-		sharedTicket->M = atoi(argv[optind]); 
+		M = isNumber(argv[optind]); 
 		isSetM = true;		// Nastavení příznaku zpracování povinného parametru - zadán
 	}
 	
-	if(!isSetN || !isSetM){
+	if(!isSetN || !isSetM || N < 0 || M < 0){
 		fprintf(stderr, "parseArguments() error\nUsage: %s [-N \"počet vláken\"] [-M \"počet průchodů KS\"]\n", argv[0]);
 		exit(ERR_PARAM);		// Nesprávně zadané parametry
 	}
 	
 	return true;
-}
-
-/*
- * Funkce pro ověření číselnosti parametrů.
- */
-bool isNumber (char *argument)
-{
-    char *ptr;
-    strtod(argument, &ptr);                   
-    if (*ptr == '\0')                          
-        return false;
-    return true;
 }
 
 /*
@@ -181,8 +186,13 @@ int main(int argc, char* argv[])
 	// Proměnné pro cykly
 	int i;
 	int j;
+	
+	// Zpracování argumentů
+	parseArguments(argv, argc);
+	
 	// Vytvoření sdílené paměti
 	int shm_id = shm_open(SHM_SPEC, O_CREAT | O_EXCL | O_RDWR, RIGHTS);
+	
 	if (shm_id < ZERO){
 		fprintf(stderr, "shm_open() error\n");
 		close(shm_id);
@@ -201,9 +211,9 @@ int main(int argc, char* argv[])
 	sharedTicket->ticket = -1;
 	sharedTicket->now = 0;
 	sharedTicket->next = 1;
+	sharedTicket->N = N;
+	sharedTicket->M = M;
 
-	// Zpracování argumentů
-	parseArguments(argv, argc);
 	// Pole ID jednotlivých vláken
 	pthread_t thread_id[sharedTicket->N];
 
@@ -225,5 +235,5 @@ int main(int argc, char* argv[])
 	munmap(sharedTicket, sizeof(SharedMemory));
 	shm_unlink(SHM_SPEC);
 	close(shm_id);
-	exit(EXIT_OK);
+	return (EXIT_SUCCESS);
 }

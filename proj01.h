@@ -28,7 +28,7 @@
 #define SHM_SPEC "/xstejs24_sharedMemory"
 #define RIGHTS 0644
 #define ZERO 0
-#define ERR_PARAM 1
+#define ERR_PARAM -1
 #define ERR_SHM 2
 #define ERR_ELSE 3
 #define EXIT_OK 0
@@ -47,7 +47,7 @@ typedef struct{
 /*
  * Funkce pro ověření číselnosti parametrů.
  */
-bool isNumber (char *argument);
+int isNumber (char *argument);
 
 /*
  * Funkce pro vytvoření semínka pro random generátor
