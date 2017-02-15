@@ -8,7 +8,7 @@
 #################################################
 
 CC = gcc
-CFLAGS = -std=gnu99 -Wall -pedantic -W -Wextra -pthread
+CFLAGS = -std=gnu99 -Wall -pedantic -W -Wextra -pthread -D_SVID_SOURCE -D_GNU_SOURCE 
 LOGIN = xstejs24
 PROJ_NAME = proj01
 FILES = proj01.o 
@@ -18,7 +18,7 @@ PACK = *.c *.h Makefile
 	$(CC) $(CFLAGS) -c -o $@ $<
 	
 default: $(FILES)
-	$(CC) $(CFLAGS) -o $(PROJ_NAME) $^
+	$(CC) $(CFLAGS) -o $(PROJ_NAME) $^ -lrt
 	
 pack: clean
 	rm -f $(LOGIN).zip

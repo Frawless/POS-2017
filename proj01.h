@@ -7,21 +7,6 @@
 *			Verze:	1.0		                    *
 ************************************************/
 
-#define _POSIX_C_SOURCE 199500L
-#include <pthread.h>
-//#include <limits.h>
-//#ifdef _POSIX_THREADS
-//	#include <pthread.h>
-//#else
-//	#error "POSIX threads are not available"
-//#endif
-
-#define _XOPEN_SOURCE
-#define _XOPEN_SOURCE_EXTENDED 1 /* XPG 4.2 - needed for WCOREDUMP() */
-
-#define MAX_TIME 500
-
-
 #include <stdio.h>
 #include <getopt.h>
 #include <stdlib.h>
@@ -29,35 +14,43 @@
 #include <sys/timeb.h>	// možná není an merlinu
 #include <sys/time.h>
 
+#include <sys/mman.h>
+#include <sys/shm.h>
+#include <fcntl.h>
+
+#define _POSIX_C_SOURCE 200809L
+//#include <pthread.h>
+#include <unistd.h>
+#if _POSIX_VERSION >= 200112L
+	#include <pthread.h>
+#else
+	#error "POSIX threads are not available"
+#endif
+
+#define MAX_TIME 500
+#define SHM_SPEC "/xstejs24_sharedMemory"
+#define RIGHTS 0644
+#define ZERO 0
+#define ERR_PARAM 1
+#define ERR_SHM 2
+#define ERR_ELSE 3
+#define EXIT_OK 0
+
 /*
- * Struktura pro vstupní parametry
+ * Struktura pro sdílenou pamět.
  */
 typedef struct{
 	int N;
 	int M;
-	bool isSetN;
-	bool isSetM;
-} Arguments;
-
-/*
- * Struktura pro pořadí.
- */
-typedef struct{
 	int next;
 	int now;
-} TLOCK;
+	int ticket;
+} SharedMemory;
 
 /*
  * Funkce pro ověření číselnosti parametrů.
  */
-bool isNumber (char *argument)
-{
-    char *ptr;
-    strtod(argument, &ptr);                   
-    if (*ptr == '\0')                          
-        return false;
-    return true;
-}
+bool isNumber (char *argument);
 
 /*
  * Funkce pro vytvoření semínka pro random generátor
@@ -73,7 +66,7 @@ void threadSleep(int random);
 /*
  * Funkce pro zpracování parametrů.
  */
-bool parseArguments(Arguments *args, char* argv[], int argc);
+bool parseArguments(char* argv[], int argc);
 
 /* 
  * Výstupní hodnotou této funkce je unikátní číslo lístku, který určuje pořadí
