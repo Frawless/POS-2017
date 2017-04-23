@@ -1,27 +1,29 @@
 /************************************************
-*	 Projekt: 	Projekt do pÅ™edmÄ›tu POS		    * 
+*	 Projekt: 	Projekt do pøedmìtu POS		    * 
 * 				Ticket Algorithm			    *
-*	AutoÅ™i:	Bc. Jakub Stejskal <xstejs24>	    *
-*	Nazev souboru: ticket.c						*
+*	Autoøi:	Bc. Jakub Stejskal <xstejs24>	    *
+*	Nazev souboru: proj01.c						*
 *			Datum:  9. 2. 2017					*
 *			Verze:	1.0		                    *
 ************************************************/
 
 #include "proj01.h"
 
-pthread_mutex_t ks_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoÅ™enÃ­ semaforu	
-pthread_mutex_t ticket_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoÅ™enÃ­ semaforu
+pthread_mutex_t ks_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoøení semaforu	
+pthread_mutex_t ticket_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoøení semaforu
+pthread_mutex_t id_mutex = PTHREAD_MUTEX_INITIALIZER;	// vytvoøení semaforu
 
-pthread_cond_t  condition_var   = PTHREAD_COND_INITIALIZER;	// VytvoÅ™enÃ­ podmÃ­nky
+pthread_cond_t  condition_var   = PTHREAD_COND_INITIALIZER;	// Vytvoøení podmínky
 
 
-// SdÃ­lenÃ¡ pamÄ›t
-SharedMemory *sharedTicket;
+
+// Sdílená pamìt
+SharedMemory sharedTicket = {0,0,1,0,-1,0};
 int N;
 int M;
 
 /*
- * Funkce pro ovÄ›Å™enÃ­ ÄÃ­selnosti parametrÅ¯.
+ * Funkce pro ovìøení èíselnosti parametrù.
  */
 int isNumber (char *argument)
 {
@@ -29,51 +31,51 @@ int isNumber (char *argument)
     long arg = strtol(argument, &ptr,10);                   
     if (*ptr != '\0')
 	{
-		fprintf(stderr, "parseArguments() error\nUsage: proj01 [-N \"poÄet vlÃ¡ken\"] [-M \"poÄet prÅ¯chodÅ¯ KS\"]\n");
-		exit(ERR_PARAM);		// NesprÃ¡vnÄ› zadanÃ© parametry		
+		fprintf(stderr, "parseArguments() error\nUsage: proj01 [\"pocet vlaken\"] [\"pocet pruchodu KS\"]\n");
+		exit(ERR_PARAM);		// Nesprávnì zadané parametry		
 	}
     return (int)arg;
 }
 
 /*
- * Funkce pro zpracovÃ¡nÃ­ parametrÅ¯.
+ * Funkce pro zpracování parametrù.
  */
 bool parseArguments(char* argv[], int argc)
 {
 	int opt;
-	bool isSetN = false;		// NastavenÃ­ pÅ™Ã­znaku zpracovÃ¡nÃ­ povinnÃ©ho parametru
-	bool isSetM = false;		// NastavenÃ­ pÅ™Ã­znaku zpracovÃ¡nÃ­ povinnÃ©ho parametru
-    while ((opt = getopt(argc, argv, "N:M:")) != -1) {		// ZpracovÃ¡nÃ­ parametrÅ¯
+	bool isSetN = false;		// Nastavení pøíznaku zpracování povinného parametru
+	bool isSetM = false;		// Nastavení pøíznaku zpracování povinného parametru
+    while ((opt = getopt(argc, argv, "N:M:")) != -1) {		// Zpracování parametrù
         switch (opt) {
 			case 'N': 
 				N = isNumber(optarg);
-				isSetN = true;	// NastavenÃ­ pÅ™Ã­znaku zpracovÃ¡nÃ­ povinnÃ©ho parametru - zadÃ¡n
+				isSetN = true;	// Nastavení pøíznaku zpracování povinného parametru - zadán
 				break;
 			case 'M': 
 				M = isNumber(optarg);
-				isSetM = true;	// NastavenÃ­ pÅ™Ã­znaku zpracovÃ¡nÃ­ povinnÃ©ho parametru - zadÃ¡n
+				isSetM = true;	// Nastavení pøíznaku zpracování povinného parametru - zadán
 				break;
 			default:
-				fprintf(stderr, "parseArguments() error\nUsage: %s [-N \"poÄet vlÃ¡ken\"] [-M \"poÄet prÅ¯chodÅ¯ KS\"]\n", argv[0]);
-				exit(ERR_PARAM);		// NesprÃ¡vnÄ› zadanÃ© parametry
+				fprintf(stderr, "parseArguments() error\nUsage: %s [-N \"pocet vlaken\"] [-M \"pocet pruchodu KS\"]\n", argv[0]);
+				exit(ERR_PARAM);		// Nesprávnì zadané parametry
         }
     }
 	
-	if(optind < argc){				// ZÃ­skÃ¡nÃ­ poslednÃ­ho parametru
+	if(optind < argc){				// Získání posledního parametru
 		M = isNumber(argv[optind]); 
-		isSetM = true;		// NastavenÃ­ pÅ™Ã­znaku zpracovÃ¡nÃ­ povinnÃ©ho parametru - zadÃ¡n
+		isSetM = true;		// Nastavení pøíznaku zpracování povinného parametru - zadán
 	}
 	
 	if(!isSetN || !isSetM || N < 0 || M < 0){
-		fprintf(stderr, "parseArguments() error\nUsage: %s [-N \"poÄet vlÃ¡ken\"] [-M \"poÄet prÅ¯chodÅ¯ KS\"]\n", argv[0]);
-		exit(ERR_PARAM);		// NesprÃ¡vnÄ› zadanÃ© parametry
+		fprintf(stderr, "parseArguments() error\nUsage: %s [-N \"pocet vlaken\"] [-M \"pocet pruchodu KS\"]\n", argv[0]);
+		exit(ERR_PARAM);		// Nesprávnì zadané parametry
 	}
 	
 	return true;
 }
 
 /*
- * Funkce pro vytvoÅ™enÃ­ semÃ­nka pro random generÃ¡tor
+ * Funkce pro vytvoøení semínka pro random generátor
  * Zdroj: http://stackoverflow.com/questions/1442116/how-to-get-date-and-time-value-in-c-program
  */
 unsigned int getSeed()
@@ -90,7 +92,7 @@ unsigned int getSeed()
 }
 
 /*
- * Funkce pro uspÃ¡nÃ­ vlÃ¡kna.
+ * Funkce pro uspání vlákna.
  */
 void threadSleep(int random)
 {
@@ -109,72 +111,82 @@ void threadSleep(int random)
 
 
 /* 
- * VÃ½stupnÃ­ hodnotou tÃ©to funkce je unikÃ¡tnÃ­ ÄÃ­slo lÃ­stku, kterÃ½ urÄuje poÅ™adÃ­
- * vstupu do kritickÃ© sekce. PrvnÃ­ zÃ­skanÃ½ lÃ­stek mÃ¡ hodnotu 0, dalÅ¡Ã­ 1, 2, atd.
+ * Vıstupní hodnotou této funkce je unikátní èíslo lístku, kterı urèuje poøadí
+ * vstupu do kritické sekce. První získanı lístek má hodnotu 0, dal¹í 1, 2, atd.
  */
 int getticket(void)
 {
 	pthread_mutex_lock( &ticket_mutex );	// lock
-	sharedTicket->ticket++;
-//	printf("ZvyÅ¡uji hodnotu lÃ­stku na: %d\n", sharedTicket->ticket);
+	sharedTicket.ticket++;
+//	printf("Zvy¹uji hodnotu lístku na: %d\n", sharedTicket.ticket);
 	pthread_mutex_unlock( &ticket_mutex );	//unclock
 	
-	return sharedTicket->ticket;
+	return sharedTicket.ticket;
 }
 
 /* 
- * Vstup do kritickÃ© sekce, kde parametr aenter je ÄÃ­slo pÅ™idÄ›lenÃ©ho lÃ­stku funkcÃ­ getticket(). 
- * Na poÄÃ¡tku programu je vstup umoÅ¾nÄ›n jen vlÃ¡knu s lÃ­stkem 0. V kritickÃ© sekci mÅ¯Å¾e bÃ½t v danÃ©m 
- * okamÅ¾iku maximÃ¡lnÄ› jedno vlÃ¡kno.
+ * Funkce pro získání ID procesu
  */
-void await(int aenter, int id)	// TODO - odstranit int id po doladÄ›nÃ­
+int getID(void)
+{
+	pthread_mutex_lock( &id_mutex );	// lock
+	sharedTicket.ID++;
+	pthread_mutex_unlock( &id_mutex );	//unclock
+	
+	return sharedTicket.ID;
+}
+
+/* 
+ * Vstup do kritické sekce, kde parametr aenter je èíslo pøidìleného lístku funkcí getticket(). 
+ * Na poèátku programu je vstup umo¾nìn jen vláknu s lístkem 0. V kritické sekci mù¾e bıt v daném 
+ * okam¾iku maximálnì jedno vlákno.
+ */
+void await(int aenter)
 {
 	pthread_mutex_lock( &ks_mutex );	// lock
-//	printf("IN: lock.now = %d => aenter = %d (%d)\n",sharedTicket->now, aenter,id);
-	while(sharedTicket->now != aenter)
+//	printf("IN: lock.now = %d => aenter = %d (%d)\n",sharedTicket.now, aenter,id);
+	while(sharedTicket.now != aenter)
 		pthread_cond_wait( &condition_var, &ks_mutex );	
-		// TODO - OvÄ›Å™it funkÄnost
 }
 
 /*
- * VÃ½stup z kritickÃ© sekce, coÅ¾ umoÅ¾nÃ­ vstup jinÃ©mu vlÃ¡knu pÅ™es funkci await() s lÃ­stkem
- * o jedniÄku vyÅ¡Å¡Ã­m, neÅ¾ mÄ›lo vlÃ¡kno kritickou sekci prÃ¡vÄ› opouÅ¡tÄ›jÃ­cÃ­.
+ * Vıstup z kritické sekce, co¾ umo¾ní vstup jinému vláknu pøes funkci await() s lístkem
+ * o jednièku vy¹¹ím, ne¾ mìlo vlákno kritickou sekci právì opou¹tìjící.
  */
 void advance(void)
 {
-	/* TODO - tady ta inkrementace musÃ­ bÃ½t ATOMICKÃ*/
 	pthread_mutex_lock( &ticket_mutex );	// lock
-	sharedTicket->now++;
-	sharedTicket->next++;
+	sharedTicket.now++;
+	sharedTicket.next++;
 	pthread_mutex_unlock( &ticket_mutex );	// lock
 	
-//	printf("OUT: lock.now = %d => lock.next = %d\n",sharedTicket->now, sharedTicket->next);
+//	printf("OUT: lock.now = %d => lock.next = %d\n",sharedTicket.now, sharedTicket.next);
 	pthread_cond_broadcast( &condition_var );
-	// pthread_cond_signal( &condition_var ); - povolÃ­ spuÅ¡tÄ›nÃ­ poslednÃ­ho vlÃ¡kna, broadcast probudÃ­ vÅ¡echny
+	// pthread_cond_signal( &condition_var ); - povolí spu¹tìní posledního vlákna, broadcast probudí v¹echny
 	pthread_mutex_unlock( &ks_mutex );	//unclock
 }
 
 /*
- * Funkce pro obsluÅ¾nÃ­ rutinu kaÅ¾dÃ©ho vlÃ¡kna.
+ * Funkce pro obslu¾ní rutinu ka¾dého vlákna.
  */
-void *thread_function(void *i)
+void *thread_function()
 {
-//	printf("Hodnota \"i\" ve funkci vlÃ¡kna: %d\n", *((int *)i));
-	int id = *((int *)i);
-	free(i);
+//	printf("Hodnota \"i\" ve funkci vlákna: %d\n", *((int *)i));
+	int id = getID();
+	//free(i);
 	int ticket;
    
 	unsigned int seed = getSeed();
 	
-	while ((ticket = getticket()) < sharedTicket->M) { /* PÅ™idÄ›lenÃ­ lÃ­stku */
+	while ((ticket = getticket()) < sharedTicket.M) { /* Pøidìlení lístku */
 //		printf("Thread ID: %d (ticket: %d)\n", id,ticket);
-		/* NÃ¡hodnÃ© ÄekÃ¡nÃ­ v intervalu <0,0 s, 0,5 s> */
+		/* Náhodné èekání v intervalu <0,0 s, 0,5 s> */
 		threadSleep(rand_r(&seed) / (RAND_MAX/MAX_TIME));
-		await(ticket,id);		/* Vstup do KS */
-		printf("Ticket: %d (%d)\n", ticket, id); /* fflush(stdout); */
+		await(ticket);		/* Vstup do KS */
+		printf("%d\t(%d)\n", ticket, id); /* fflush(stdout); */
 		fflush(stdout);
-		advance();              /* VÃ½stup z KS */
-		/* NÃ¡hodnÃ© ÄekÃ¡nÃ­ v intervalu <0,0 s, 0,5 s> */
+		advance();              /* Vıstup z KS */
+		/* Náhodné èekání v intervalu <0,0 s, 0,5 s> */
 		threadSleep(rand_r(&seed) / (RAND_MAX/MAX_TIME));
 	}	   
 	
@@ -183,57 +195,64 @@ void *thread_function(void *i)
 
 int main(int argc, char* argv[]) 
 {
-	// PromÄ›nnÃ© pro cykly
+	// Zpracování argumentù
+	if(!(argc == 3)){
+		fprintf(stderr, "parseArguments() error\nUsage: %s [\"pocet vlaken\"] [\"pocet pruchodu KS\"]\n",argv[0]);
+		exit(ERR_PARAM);
+	}
+
+	N = isNumber(argv[1]);	// Pocet vlaken
+	M = isNumber(argv[2]);	// Pocet pruchodu KS
+
+	sharedTicket.N = N;
+	sharedTicket.M = M;
+
+	// Promìnné pro cykly
 	int i;
 	int j;
+ 
+	pthread_attr_t attr;
+	void *result; 
+	int res; 
+	/* vytvoøení implicitních atributù */ 
+	if ((res = pthread_attr_init(&attr)) != 0) { 
+		printf("pthread_attr_init() err %d\n", res); 
+		return 1; 
+	} 
+	/* nastavení typu vlákna v atributech */ 
+	if ((res = pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_JOINABLE)) != 0) { 
+		printf("pthread_attr_setdetachstate() err %d\n", res); 
+		return 1; 
+	} 
+	// Zpracování argumentù
+	//parseArguments(argv, argc);
 	
-	// ZpracovÃ¡nÃ­ argumentÅ¯
-	parseArguments(argv, argc);
-	
-	// VytvoÅ™enÃ­ sdÃ­lenÃ© pamÄ›ti
-	int shm_id = shm_open(SHM_SPEC, O_CREAT | O_EXCL | O_RDWR, RIGHTS);
-	
-	if (shm_id < ZERO){
-		fprintf(stderr, "shm_open() error\n");
-		close(shm_id);
-		exit(ERR_SHM);
-	}
-	// MÃ­sto pro strukturu
-	if(ftruncate(shm_id, sizeof(SharedMemory))){
-		fprintf(stderr, "ftruncate() error\n");
-		shm_unlink(SHM_SPEC);
-		close(shm_id);
-		exit(ERR_SHM);
-	}
-	// NamapovÃ¡nÃ­ sdÃ­lenÃ© pamÄ›ti
-	sharedTicket = (SharedMemory*)mmap(NULL, sizeof(SharedMemory), PROT_READ | PROT_WRITE, MAP_SHARED, shm_id, 0);
-	//Inicializace sdÃ­lenÃ© pamÄ›ti
-	sharedTicket->ticket = -1;
-	sharedTicket->now = 0;
-	sharedTicket->next = 1;
-	sharedTicket->N = N;
-	sharedTicket->M = M;
+	// Pole ID jednotlivıch vláken
+	pthread_t thread_id[sharedTicket.N];
 
-	// Pole ID jednotlivÃ½ch vlÃ¡ken
-	pthread_t thread_id[sharedTicket->N];
-
-	printf("VytvÃ¡Å™Ã­m vlÃ¡kna...\n");
-	// Tvorba vlÃ¡ken
-	for(i=1; i <= sharedTicket->N; i++)
+	// Tvorba vláken
+	for(i=0; i < sharedTicket.N; i++)
 	{
-		int *arg = (int*)malloc(sizeof(*arg));
-		*arg = i;
-		pthread_create(&thread_id[i], NULL, thread_function, arg);
+		res = pthread_create(&thread_id[i], &attr, thread_function, NULL);
+		if (res){ 
+			printf("pthread_create() error %d\n", res);
+			return 1; 
+		}
 	}
 
-	// UkonÄenÃ­ vlÃ¡ken
-	for(j=1; j <= sharedTicket->N; j++)
+	// Ukonèení vláken
+	for(j=0; j < sharedTicket.N; j++)
 	{		
-		pthread_join(thread_id[j], NULL);
+		//pthread_join(thread_id[j], NULL);
+		/* èekání na dokonèení a pøevzetí stavu */ 
+		if ((res = pthread_join(thread_id[j], &result)) != 0) { 
+			printf("pthread_attr_init() err %d\n",res); 
+			return 1; 
+		} 
 	}		
 
-	munmap(sharedTicket, sizeof(SharedMemory));
-	shm_unlink(SHM_SPEC);
-	close(shm_id);
+	//munmap(sharedTicket, sizeof(SharedMemory));
+	//shm_unlink(SHM_SPEC);
+	//close(shm_id);
 	return (EXIT_SUCCESS);
 }

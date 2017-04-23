@@ -1,8 +1,8 @@
 /************************************************
-*	 Projekt: 	Projekt do pÅ™edmÄ›tu POS		    * 
+*	 Projekt: 	Projekt do pøedmìtu POS		    * 
 * 				Ticket Algorithm			    *
-*	AutoÅ™i:	Bc. Jakub Stejskal <xstejs24>	    *
-*	Nazev souboru: ticket.h						*
+*	Autoøi:	Bc. Jakub Stejskal <xstejs24>	    *
+*	Nazev souboru: proj01.h						*
 *			Datum:  9. 2. 2017					*
 *			Verze:	1.0		                    *
 ************************************************/
@@ -34,7 +34,7 @@
 #define EXIT_OK 0
 
 /*
- * Struktura pro sdÃ­lenou pamÄ›t.
+ * Struktura pro sdílenou pamìt.
  */
 typedef struct{
 	int N;
@@ -42,44 +42,51 @@ typedef struct{
 	int next;
 	int now;
 	int ticket;
+	int ID;
 } SharedMemory;
 
 /*
- * Funkce pro ovÄ›Å™enÃ­ ÄÃ­selnosti parametrÅ¯.
+ * Funkce pro ovìøení èíselnosti parametrù.
  */
 int isNumber (char *argument);
 
 /*
- * Funkce pro vytvoÅ™enÃ­ semÃ­nka pro random generÃ¡tor
+ * Funkce pro vytvoøení semínka pro random generátor
  * Zdroj: http://stackoverflow.com/questions/1442116/how-to-get-date-and-time-value-in-c-program
  */
 unsigned int getSeed();
 
 /*
- * Funkce pro uspÃ¡nÃ­ vlÃ¡kna.
+ * Funkce pro uspání vlákna.
  */
 void threadSleep(int random);
 
 /*
- * Funkce pro zpracovÃ¡nÃ­ parametrÅ¯.
+ * Funkce pro zpracování parametrù.
  */
 bool parseArguments(char* argv[], int argc);
+//void parseArguments(char* argv[], int argc);
 
 /* 
- * VÃ½stupnÃ­ hodnotou tÃ©to funkce je unikÃ¡tnÃ­ ÄÃ­slo lÃ­stku, kterÃ½ urÄuje poÅ™adÃ­
- * vstupu do kritickÃ© sekce. PrvnÃ­ zÃ­skanÃ½ lÃ­stek mÃ¡ hodnotu 0, dalÅ¡Ã­ 1, 2, atd.
+ * Vıstupní hodnotou této funkce je unikátní èíslo lístku, kterı urèuje poøadí
+ * vstupu do kritické sekce. První získanı lístek má hodnotu 0, dal¹í 1, 2, atd.
  */
 int getticket(void);
 
 /* 
- * Vstup do kritickÃ© sekce, kde parametr aenter je ÄÃ­slo pÅ™idÄ›lenÃ©ho lÃ­stku funkcÃ­ getticket(). 
- * Na poÄÃ¡tku programu je vstup umoÅ¾nÄ›n jen vlÃ¡knu s lÃ­stkem 0. V kritickÃ© sekci mÅ¯Å¾e bÃ½t v danÃ©m 
- * okamÅ¾iku maximÃ¡lnÄ› jedno vlÃ¡kno.
+ * Funkce pro získání ID procesu
  */
-void await(int aenter,int id);
+int getID(void);
+
+/* 
+ * Vstup do kritické sekce, kde parametr aenter je èíslo pøidìleného lístku funkcí getticket(). 
+ * Na poèátku programu je vstup umo¾nìn jen vláknu s lístkem 0. V kritické sekci mù¾e bıt v daném 
+ * okam¾iku maximálnì jedno vlákno.
+ */
+void await(int aenter);
 
 /*
- * VÃ½stup z kritickÃ© sekce, coÅ¾ umoÅ¾nÃ­ vstup jinÃ©mu vlÃ¡knu pÅ™es funkci await() s lÃ­stkem
- * o jedniÄku vyÅ¡Å¡Ã­m, neÅ¾ mÄ›lo vlÃ¡kno kritickou sekci prÃ¡vÄ› opouÅ¡tÄ›jÃ­cÃ­.
+ * Vıstup z kritické sekce, co¾ umo¾ní vstup jinému vláknu pøes funkci await() s lístkem
+ * o jednièku vy¹¹ím, ne¾ mìlo vlákno kritickou sekci právì opou¹tìjící.
  */
 void advance(void);

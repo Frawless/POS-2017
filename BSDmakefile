@@ -1,10 +1,10 @@
 #################################################
-#	Projekt: Projekt do pÅ™edmÄ›tu POS	#
-#		 Ticket Algorithm		#
-#	 AutoÅ™i: Bc. Jakub Stejskal <xstejs24>	#
-# Nazev souboru: BSDMakefile			#
-#	  Datum: 9. 2. 2017		    	#		
-#	  Verze: 1.0				#
+#	Projekt: Projekt do pøedmìtu POS			#
+#		 Ticket Algorithm						#
+#	 Autor: Bc. Jakub Stejskal <xstejs24>		#
+# Nazev souboru: GNUakefile						#	
+#	  Datum: 9. 2. 2017		    				#		
+#	  Verze: 1.0								#
 #################################################
 
 CC = gcc 
